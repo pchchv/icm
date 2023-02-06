@@ -13,7 +13,7 @@ const (
 )
 
 var (
-	Log    *CTopLogger
+	Log    *Logger
 	exited bool
 	level  = logging.INFO // default level
 	format = logging.MustStringFormatter(
@@ -26,14 +26,14 @@ type statusMsg struct {
 	IsError bool
 }
 
-type CTopLogger struct {
+type Logger struct {
 	*logging.Logger
 	backend *logging.MemoryBackend
 	logFile *os.File
 	sLog    []statusMsg
 }
 
-func (c *CTopLogger) FlushStatus() chan statusMsg {
+func (c *Logger) FlushStatus() chan statusMsg {
 	ch := make(chan statusMsg)
 
 	go func() {
@@ -48,31 +48,31 @@ func (c *CTopLogger) FlushStatus() chan statusMsg {
 	return ch
 }
 
-func (c *CTopLogger) StatusQueued() bool {
+func (c *Logger) StatusQueued() bool {
 	return len(c.sLog) > 0
 }
 
-func (c *CTopLogger) Status(s string) {
+func (c *Logger) Status(s string) {
 	c.addStatus(statusMsg{s, false})
 }
 
-func (c *CTopLogger) StatusErr(err error) {
+func (c *Logger) StatusErr(err error) {
 	c.addStatus(statusMsg{err.Error(), true})
 }
 
-func (c *CTopLogger) addStatus(sm statusMsg) {
+func (c *Logger) addStatus(sm statusMsg) {
 	c.sLog = append(c.sLog, sm)
 }
 
-func (c *CTopLogger) Statusf(s string, a ...interface{}) {
+func (c *Logger) Statusf(s string, a ...interface{}) {
 	c.Status(fmt.Sprintf(s, a...))
 }
 
-func Init() *CTopLogger {
+func Init() *Logger {
 	if Log == nil {
 		logging.SetFormatter(format) // setup default formatter
 
-		Log = &CTopLogger{
+		Log = &Logger{
 			logging.MustGetLogger("ctop"),
 			logging.NewMemoryBackend(size),
 			nil,
@@ -113,7 +113,7 @@ func Init() *CTopLogger {
 	return Log
 }
 
-func (log *CTopLogger) tail() chan string {
+func (log *Logger) tail() chan string {
 	stream := make(chan string)
 
 	node := log.backend.Head()
@@ -138,7 +138,7 @@ func (log *CTopLogger) tail() chan string {
 	return stream
 }
 
-func (log *CTopLogger) Exit() {
+func (log *Logger) Exit() {
 	exited = true
 
 	if log.logFile != nil {
